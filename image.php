@@ -5,16 +5,17 @@
 ///  URL EXAMPLE: ../image.php?file=picture.jpg&width=500&crop=true                       ///
 ///  Set folder permissions for $photoPath to 0775                                        ///
 ///  PECL :: Package :: imagick - PHP Required                                            ///
+///  Supported File Types: JPEG, PNG, GIF, GD, GD2, WBMP, XBM                             ///
 ///                                                                                       ///
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
 
 $stampImg  = true;  //  Enable or disable image stamp
-$stampSize = "0.25";  // Percentage size of stamp to be applied to photo
+$stampSize = '0.25';  // Percentage size of stamp to be applied to photo
 $minSize   = 200;  // Only photos with widths greater than or equal to will have the stamp applied
-$stampFile = 'img/logo-3.png';  // Path to image used for stamping photos
-$photoPath = "img/gallery/pics/";  // Location of the photos folder
-$cachePath = $photoPath."cache/";  // Cache resides in photos folder and can be deleted to clear cached images
+$stampFile = 'img/logo-3.png';  // Path to PNG image used for stamping photos
+$photoPath = 'img/gallery/pics/';  // Location of the photos folder
+$cachePath = $photoPath.'cache/';  // Cache resides in photos folder and can be deleted to clear cached images
 
 
 // Do not edit anything below this line
@@ -26,13 +27,13 @@ if (!is_dir($cachePath)) {
 $newFile = filter_var($_GET['file'], FILTER_SANITIZE_STRING);
 $newWidth = intval($_GET['width']);
 $resizedFilename = $newFile;
-if (filter_var($_GET["crop"], FILTER_VALIDATE_BOOLEAN)) {
+if (filter_var($_GET['crop'], FILTER_VALIDATE_BOOLEAN)) {
         $cropImg = true;
-        $resizedFilename = "C_".$resizedFilename;
+        $resizedFilename = 'C_'.$resizedFilename;
 }
 if (isset($newWidth) && is_numeric($newWidth) && $newWidth > 0) {
         $widthSet = true;
-        $resizedFilename = "W".$newWidth."_".$resizedFilename;
+        $resizedFilename = 'W'.$newWidth.'_'.$resizedFilename;
 }
 $resizedFile = $cachePath.$resizedFilename;
 $file = $photoPath.$newFile;
@@ -40,46 +41,40 @@ $stampSize = floatval($stampSize);
 
 if (is_file($resizedFile) && is_readable($resizedFile)) {
 	// Display image
-	header ("Location: ".$resizedFile);
+	header('Location: '.$resizedFile);
 	exit();
 }
 	else {                     
                 function open_image ($file) {
+                        global $imgType;
+
                         # JPEG:
                         $im = @imagecreatefromjpeg($file);
-                        if ($im !== false) { return $im; }
+                        if ($im !== false) { $imgType = 'jpg'; return $im; }
 
                         # GIF:
                         $im = @imagecreatefromgif($file);
-                        if ($im !== false) { return $im; }
+                        if ($im !== false) { $imgType = 'gif'; return $im; }
 
                         # PNG:
                         $im = @imagecreatefrompng($file);
-                        if ($im !== false) { return $im; }
+                        if ($im !== false) { $imgType = 'png'; return $im; }
 
                         # GD File:
                         $im = @imagecreatefromgd($file);
-                        if ($im !== false) { return $im; }
+                        if ($im !== false) { $imgType = 'gd'; return $im; }
 
                         # GD2 File:
                         $im = @imagecreatefromgd2($file);
-                        if ($im !== false) { return $im; }
+                        if ($im !== false) { $imgType = 'gd2'; return $im; }
 
                         # WBMP:
                         $im = @imagecreatefromwbmp($file);
-                        if ($im !== false) { return $im; }
+                        if ($im !== false) { $imgType = 'wbmp'; return $im; }
 
                         # XBM:
                         $im = @imagecreatefromxbm($file);
-                        if ($im !== false) { return $im; }
-
-                        # XPM:
-                        $im = @imagecreatefromxpm($file);
-                        if ($im !== false) { return $im; }
-
-                        # Try and load from string:
-                        $im = @imagecreatefromstring(file_get_contents($file));
-                        if ($im !== false) { return $im; }
+                        if ($im !== false) { $imgType = 'xbm'; return $im; }
 
                         return false;
                 }
@@ -98,8 +93,7 @@ if (is_file($resizedFile) && is_readable($resizedFile)) {
 
                 // Resample
                 $image_resized = imagecreatetruecolor($newWidth, $newHeight);
-                if ($cropImg === true) {
-                        //list($width, $height) = getimagesize($file);			
+                if ($cropImg === true) {		
 			if ($width >= $height) {
 				$ratio = $newWidth / $width;
 				$intraSourceWidth = $newWidth;
@@ -137,7 +131,7 @@ if (is_file($resizedFile) && is_readable($resizedFile)) {
                 }
                         else imagecopyresampled($image_resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
-                if ($newWidth>=$minSize && $stampImg === true) {
+                if ($newWidth >= $minSize && $stampImg === true) {
                         // Load the stamp and the photo to apply the watermark to
                         $stampWidth = ceil($newWidth*$stampSize);
                         if (is_file($cachePath.'stamp_w'.$stampWidth.'.png') && is_readable($cachePath.'stamp_w'.$stampWidth.'.png')) {
@@ -165,9 +159,32 @@ if (is_file($resizedFile) && is_readable($resizedFile)) {
                 }
 
                 // Save to cache and display resized image
-                imagejpeg($image_resized, $cachePath.$resizedFilename);
+                switch($imgType) {
+                        case 'jpeg':
+                                imagejpeg($image_resized, $cachePath.$resizedFilename);
+                                break;
+                        case 'gif':
+                                imagegif($image_resized, $cachePath.$resizedFilename);
+                                break;
+                        case 'png':
+                                imagepng($image_resized, $cachePath.$resizedFilename);
+                                break;
+                        case 'gd':
+                                imagegd($image_resized, $cachePath.$resizedFilename);
+                                break;
+                        case 'gd2':
+                                imagegd2($image_resized, $cachePath.$resizedFilename);
+                                break;
+                        case 'wbmp':
+                                imagewbmp($image_resized, $cachePath.$resizedFilename);
+                                break;
+                        case 'xbm':
+                                imagexbm($image_resized, $cachePath.$resizedFilename);
+                                break;
+                }
+
                 imagedestroy($image_resized);
-                header ("Location: ".$resizedFile);
+                header('Location: '.$resizedFile);
                 exit();
 }
 ?>
