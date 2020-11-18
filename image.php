@@ -50,7 +50,7 @@ if (is_file($resizedFile) && is_readable($resizedFile)) {
 
                         # JPEG:
                         $im = @imagecreatefromjpeg($file);
-                        if ($im !== false) { $imgType = 'jpg'; return $im; }
+                        if ($im !== false) { $imgType = 'jpeg'; return $im; }
 
                         # GIF:
                         $im = @imagecreatefromgif($file);
