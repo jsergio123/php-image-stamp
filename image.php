@@ -4,7 +4,6 @@
 ///                                                                                       ///
 ///  URL EXAMPLE: ../image.php?file=picture.jpg&width=500&crop=true                       ///
 ///  Set folder permissions for $photoPath to 0777                                        ///
-///  PECL :: Package :: imagick - PHP Required                                            ///
 ///  Supported File Types: JPEG, PNG, GIF, GD, GD2, WBMP, XBM                             ///
 ///                                                                                       ///
 /////////////////////////////////////////////////////////////////////////////////////////////
@@ -26,7 +25,7 @@ if (!is_dir($cachePath)) {
 }
 $newFile = filter_var($_GET['file'], FILTER_SANITIZE_STRING);
 $resizedFilename = $newFile;
-if (filter_var($_GET['crop'], FILTER_VALIDATE_BOOLEAN)) {
+if (isset($_GET['crop']) && filter_var($_GET['crop'], FILTER_VALIDATE_BOOLEAN)) {
         $cropImg = true;
         $resizedFilename = 'C_'.$resizedFilename;
 }
@@ -84,20 +83,18 @@ if (is_file($resizedFile) && is_readable($resizedFile)) {
                 if ($image === false) { die ('Unable to open image'); }
 
                 // Get original width and height
-                $width = imagesx($image);
-                $height = imagesy($image);
+                list($width, $height) = getimagesize($file);
 
                 // Set a new width, and calculate new height
                 if ($widthSet === false) { $newWidth = $width; }
-                $newHeight = ($cropImg === true) ? round($newWidth * 0.75) : $height * ($newWidth/$width);
+                $newHeight = ($cropImg === true) ? $newWidth * 0.75 : $height * ($newWidth/$width);
+                $newHeight - ceil($newHeight);
 
                 // Resample
                 $image_resized = imagecreatetruecolor($newWidth, $newHeight);
                 if ($cropImg === true) {		
 			if ($width >= $height) {
-				$ratio = $newWidth / $width;
-				$intraSourceWidth = $newWidth;
-				$intraSourceHeight = $height * $ratio;
+				$intraSourceHeight = $height * ($newWidth/$width);
 				imagecopyresampled(
 					$image_resized,
 					$image,
@@ -112,9 +109,7 @@ if (is_file($resizedFile) && is_readable($resizedFile)) {
 				);
 			}
                                 else {
-                                        $ratio = $newHeight / $height;
-                                        $intraSourceHeight = $newHeight;
-                                        $intraSourceWidth = $width * $ratio;
+                                        $intraSourceWidth = $width * ($newHeight/$height);
                                         imagecopyresampled(
                                                 $image_resized,
                                                 $image,
@@ -131,30 +126,34 @@ if (is_file($resizedFile) && is_readable($resizedFile)) {
                 }
                         else imagecopyresampled($image_resized, $image, 0, 0, 0, 0, $newWidth, $newHeight, $width, $height);
 
+                imagedestroy($image);
                 if ($newWidth >= $minSize && $stampImg === true) {
                         // Load the stamp and the photo to apply the watermark to
                         $stampWidth = ceil($newWidth*$stampSize);
                         if (is_file($cachePath.'stamp_w'.$stampWidth.'.png') && is_readable($cachePath.'stamp_w'.$stampWidth.'.png')) {
-                                $stamp = imagecreatefrompng($cachePath.'stamp_w'.$stampWidth.'.png');
+                                $resizedStamp = imagecreatefrompng($cachePath.'stamp_w'.$stampWidth.'.png');
+                                $stampHeight = imagesy($resizedStamp);
                         }
                                 else {
-                                        $resizeStamp = new Imagick($stampFile);
-                                        $resizeStamp->resizeImage($stampWidth, 0, imagick::FILTER_LANCZOS, 1);
-                                        $resizeStamp->writeImage($cachePath.'stamp_w'.$stampWidth.'.png');
-                                        $resizeStamp->clear();
-                                        $resizeStamp->destroy();
-                                        $stamp = imagecreatefrompng($cachePath.'stamp_w'.$stampWidth.'.png');
-                                } 
+                                        list($sx, $sy) = getimagesize($stampFile);
+                                        $stampHeight = ceil($sy * ($stampWidth/$sx));
+                                        $stamp = imagecreatefrompng($stampFile);
+                                        $resizedStamp = imagecreatetruecolor($stampWidth, $stampHeight);
+                                        imagealphablending($resizedStamp, false);
+                                        imagesavealpha($resizedStamp, true);
+                                        imagecopyresampled($resizedStamp, $stamp, 0, 0, 0, 0, $stampWidth, $stampHeight, $sx, $sy);
+                                        imagedestroy($stamp);
+                                        imagepng($resizedStamp, $cachePath.'stamp_w'.$stampWidth.'.png');
+                                }
 
                         // Set the margins for the stamp and get the height/width of the stamp image
                         $marge_right = 10;
                         $marge_bottom = 10;
-                        $sx = imagesx($stamp);
-                        $sy = imagesy($stamp);
 
                         // Copy the stamp image onto our photo using the margin offsets and the photo 
                         // width to calculate positioning of the stamp.
-                        imagecopy($image_resized, $stamp, imagesx($image_resized) - $sx - $marge_right, imagesy($image_resized) - $sy - $marge_bottom, 0, 0, imagesx($stamp), imagesy($stamp));
+                        imagecopy($image_resized, $resizedStamp, $newWidth - $stampWidth - $marge_right, $newHeight - $stampHeight - $marge_bottom, 0, 0, $stampWidth, $stampHeight);
+                        imagedestroy($resizedStamp);
 
                 }
 
