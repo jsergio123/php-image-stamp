@@ -3,7 +3,7 @@
 /////////////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                       ///
 ///  URL EXAMPLE: ../image.php?file=picture.jpg&width=500&crop=true                       ///
-///  Set folder permissions for $photoPath to 0775                                        ///
+///  Set folder permissions for $photoPath to 0777                                        ///
 ///  PECL :: Package :: imagick - PHP Required                                            ///
 ///  Supported File Types: JPEG, PNG, GIF, GD, GD2, WBMP, XBM                             ///
 ///                                                                                       ///
@@ -25,14 +25,14 @@ if (!is_dir($cachePath)) {
         if (!mkdir($cachePath, 0775)) { die('Failed to create folder...'); }
 }
 $newFile = filter_var($_GET['file'], FILTER_SANITIZE_STRING);
-$newWidth = intval($_GET['width']);
 $resizedFilename = $newFile;
 if (filter_var($_GET['crop'], FILTER_VALIDATE_BOOLEAN)) {
         $cropImg = true;
         $resizedFilename = 'C_'.$resizedFilename;
 }
-if (isset($newWidth) && is_numeric($newWidth) && $newWidth > 0) {
+if (isset($_GET['width']) && is_numeric($_GET['width']) && $_GET['width'] > 0) {
         $widthSet = true;
+        $newWidth = intval($_GET['width']);
         $resizedFilename = 'W'.$newWidth.'_'.$resizedFilename;
 }
 $resizedFile = $cachePath.$resizedFilename;
