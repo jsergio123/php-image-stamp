@@ -2,12 +2,20 @@
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
 ///                                                                                       ///
+///  AUTHOR: https://github.com/jsergio123/php-image-stamp                                ///
+///                                                                                       ///
 ///  URL EXAMPLE: ../image.php?file=picture.jpg&width=500&crop=true                       ///
-///  Set folder permissions for $photoPath to 0777                                        ///
+///  PARAMS:                                                                              ///
+///     file  (str): filename of image, must reside in $photoPath                         ///
+///     width (int): resize image to desired width keeping dimensions                     ///
+///     crop (bool): useful to create thumbnails of the same height & width               ///
+///                                                                                       ///
+///  Set folder permissions for $photoPath to writable                                    ///
 ///  Supported File Types: JPEG, PNG, GIF, GD, GD2, WBMP, XBM                             ///
 ///                                                                                       ///
 /////////////////////////////////////////////////////////////////////////////////////////////
 /////////////////////////////////////////////////////////////////////////////////////////////
+
 
 $stampImg  = true;  //  Enable or disable image stamp
 $stampSize = '0.25';  // Percentage size of stamp to be applied to photo
@@ -15,6 +23,7 @@ $minSize   = 200;  // Only photos with widths greater than or equal to will have
 $stampFile = 'img/logo-3.png';  // Path to PNG image used for stamping photos
 $photoPath = 'img/gallery/pics/';  // Location of the photos folder
 $cachePath = $photoPath.'cache/';  // Cache resides in photos folder and can be deleted to clear cached images
+list($red, $green, $blue) = array(0, 0, 0); // RGB color code used for cropped image background
 
 
 // Do not edit anything below this line
@@ -92,7 +101,9 @@ if (is_file($resizedFile) && is_readable($resizedFile)) {
 
                 // Resample
                 $image_resized = imagecreatetruecolor($newWidth, $newHeight);
-                if ($cropImg === true) {		
+                if ($cropImg === true) {
+                        $bgColor = imagecolorallocate($image_resized, $red, $green, $blue); // Set background color
+                        imagefilledrectangle($image_resized, 0, 0, $newWidth, $newHeight, $bgColor);
 			if ($width >= $height) {
 				$intraSourceHeight = $height * ($newWidth/$width);
 				imagecopyresampled(
@@ -150,8 +161,7 @@ if (is_file($resizedFile) && is_readable($resizedFile)) {
                         $marge_right = 10;
                         $marge_bottom = 10;
 
-                        // Copy the stamp image onto our photo using the margin offsets and the photo 
-                        // width to calculate positioning of the stamp.
+                        // Copy stamp image onto photo using the margin offsets & the photo width to calculate positioning of the stamp.
                         imagecopy($image_resized, $resizedStamp, $newWidth - $stampWidth - $marge_right, $newHeight - $stampHeight - $marge_bottom, 0, 0, $stampWidth, $stampHeight);
                         imagedestroy($resizedStamp);
 
